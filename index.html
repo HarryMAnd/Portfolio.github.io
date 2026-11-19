@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portfolio — Beta 1</title>
+  <meta name="description" content="Interactive 3D portfolio with a terminal menu, powered by live GitHub data." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@400;600&family=Ubuntu+Mono:wght@400;700&family=Cinzel:wght@500;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- three.js (3D engine) is loaded from a CDN -->
+  <script type="importmap">
+    { "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    } }
+  </script>
+</head>
+<body>
+  <canvas id="gl" aria-label="3D scene: drag to look around, scroll to zoom, click a glowing label"></canvas>
+
+  <!-- Boot screen -->
+  <div id="boot" class="boot">
+    <pre id="boot-log" aria-live="polite"></pre>
+    <button id="boot-start" class="boot-start" hidden>[ press ENTER or click to start ]</button>
+  </div>
+
+  <header class="nav" id="nav" hidden>
+    <button class="brand" data-go="home"><span class="prompt">~/</span><span id="brand-name">portfolio</span> <small id="version"></small></button>
+    <button id="term-btn" class="btn">&gt;_ Console</button>
+  </header>
+
+  <!-- Section content. It is drawn exactly on top of an object in the 3D scene
+       (the monitor, the open book, the letter…), not as a pop-up window. -->
+  <section id="panel" class="panel" hidden aria-live="polite">
+    <header class="panel-bar">
+      <span id="panel-title" class="panel-title"></span>
+      <button class="panel-back" data-go="home">← Back</button>
+    </header>
+    <div class="panel-body">
+
+      <div class="pane" data-pane="profile">
+        <div class="profile-head">
+          <img id="photo" class="photo" alt="" width="120" height="120" />
+          <div>
+            <h2 id="profile-name"></h2>
+            <p id="profile-headline" class="prompt"></p>
+          </div>
+        </div>
+        <p id="about" class="muted"></p>
+        <div id="highlights" class="tags big"></div>
+      </div>
+
+      <div class="pane" data-pane="projects">
+        <!-- drawn as an old-style desktop file explorer: one folder per project -->
+        <div id="explorer" class="explorer"></div>
+        <!-- the older search / filter controls, kept (hidden) because other code still uses them -->
+        <div hidden>
+        <div class="controls">
+          <input id="search" type="search" placeholder="Search projects…" aria-label="Search projects" />
+          <select id="sort" aria-label="Sort projects">
+            <option value="updated">Recently updated</option>
+            <option value="stars">Most stars</option>
+            <option value="name">Name A–Z</option>
+          </select>
+        </div>
+        <div id="chips" class="chips" role="group" aria-label="Filter by language"></div>
+        <div id="grid" class="grid"></div>
+        <p class="foot"><span id="count"></span><label class="check"><input type="checkbox" id="forks" /> Include forks</label></p>
+      </div>
+      </div>
+
+      <div class="pane" data-pane="education">
+        <div class="page">
+          <h3 class="sub">Education</h3>
+          <ul id="education" class="timeline"></ul>
+        </div>
+        <div class="page">
+          <h3 class="sub">Certifications</h3>
+          <ul id="certs" class="timeline"></ul>
+        </div>
+      </div>
+
+      <div class="pane" data-pane="skills">
+        <!-- a little Linux-style command line that lists the skills -->
+        <div id="cli" class="cli" tabindex="0" aria-live="polite"></div>
+        <button class="cli-x" data-go="home" aria-label="Close the terminal" title="Close">✕</button>
+        <!-- the older bar / tag layout, kept (hidden) because other code still fills it in -->
+        <div hidden>
+        <h3 class="sub">Languages across my repos</h3>
+        <div id="lang-bar" class="lang-bar" role="img" aria-label="Language breakdown"></div>
+        <ul id="lang-legend" class="lang-legend"></ul>
+        <h3 class="sub">Tools &amp; topics</h3>
+        <div id="skill-tags" class="tags big"></div>
+      </div>
+      </div>
+
+      <div class="pane" data-pane="experience">
+        <div id="jobs" class="jobs"></div>
+      </div>
+
+      <div class="pane" data-pane="contact">
+        <p class="salute">Dear Visitor,</p>
+        <p class="rule" aria-hidden="true">✦</p>
+        <p class="body">Should you wish to reach me, pray choose whichever way suits you best.</p>
+        <div id="contact-links" class="brand-links"></div>
+        <p class="sign">Yours faithfully,<br /><span id="letter-name"></span></p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Console-style menu: type a plain word or click a button -->
+  <section id="term" class="term" hidden aria-label="Menu console">
+    <div id="term-out" class="term-out" hidden></div>
+    <div class="term-chips" id="term-chips">
+      <button data-cmd="projects">projects</button>
+      <button data-cmd="education">education</button>
+      <button data-cmd="skills">skills</button>
+      <button data-cmd="contact">contact</button>
+      <button data-cmd="profile">profile</button>
+      <button data-cmd="experience">experience</button>
+      <button data-cmd="back">back</button>
+      <button data-cmd="help">help</button>
+    </div>
+    <form id="term-form" class="term-line" autocomplete="off">
+      <label for="term-in" id="term-prompt" class="term-prompt"></label>
+      <input id="term-in" type="text" spellcheck="false" autocapitalize="off" placeholder="type a word, e.g. projects, then press Enter" />
+    </form>
+  </section>
+
+  <p id="hint" class="hint" hidden>drag to walk around the house — every side is different · scroll to zoom · click a glowing label or use the console</p>
+
+  <div id="modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <button class="icon-btn modal-close" data-close aria-label="Close">✕</button>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
